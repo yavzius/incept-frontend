@@ -10,8 +10,10 @@ import {
   TooltipTrigger,
 } from '../components/ui/tooltip';
 import type { QuestionResult } from '../lib/questionApi';
-import { getResults, clearResults } from '../lib/storageService';
+import { getResults, clearResults, saveResults } from '../lib/storageService';
 import { graderWorkerService } from '../lib/workerService';
+import { MathRenderer } from '../components/MathRenderer';
+import { gradeQuestion } from '../lib/questionApi';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -27,6 +29,7 @@ export default function Home() {
     {}
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [refreshingIndices, setRefreshingIndices] = useState<number[]>([]);
 
   // Load results from local storage on component mount
   useEffect(() => {
@@ -93,6 +96,69 @@ export default function Home() {
       ...prev,
       [index]: !prev[index],
     }));
+  };
+
+  // Function to handle refreshing a single question
+  const handleRefreshQuestion = async (
+    index: number,
+    event: React.MouseEvent
+  ) => {
+    // Prevent the card from expanding when clicking the refresh button
+    event.stopPropagation();
+
+    // Mark this question as refreshing
+    setRefreshingIndices((prev) => [...prev, index]);
+
+    try {
+      // Get the question to refresh
+      const questionToRefresh = results[index].question;
+
+      // Create a copy of the current results
+      const updatedResults = [...results];
+
+      // Update the loading state for this question
+      updatedResults[index] = {
+        question: questionToRefresh,
+        isLoading: true,
+      };
+
+      // Update the state to show loading
+      setResults(updatedResults);
+
+      // Call the API to grade the question
+      const response = await gradeQuestion(questionToRefresh);
+
+      // Update the results with the new response
+      updatedResults[index] = {
+        question: questionToRefresh,
+        response,
+        isLoading: false,
+      };
+
+      // Update the state with the new results
+      setResults(updatedResults);
+
+      // Save the updated results to local storage
+      saveResults(updatedResults);
+    } catch (error) {
+      // Handle error
+      const updatedResults = [...results];
+      updatedResults[index] = {
+        question: results[index].question,
+        isLoading: false,
+        error:
+          error instanceof Error ? error.message : 'Failed to refresh question',
+      };
+
+      // Update the state with the error
+      setResults(updatedResults);
+
+      // Save the updated results to local storage
+      saveResults(updatedResults);
+    } finally {
+      // Remove this question from the refreshing indices
+      setRefreshingIndices((prev) => prev.filter((i) => i !== index));
+    }
   };
 
   return (
@@ -207,16 +273,41 @@ export default function Home() {
 
                           {/* Question Preview */}
                           <div className="flex-grow">
-                            <div
-                              className="line-clamp-2 text-sm"
-                              dangerouslySetInnerHTML={{
-                                __html: result.question.question,
-                              }}
-                            />
+                            <div className="line-clamp-2 text-sm">
+                              <MathRenderer
+                                content={result.question.question}
+                              />
+                            </div>
+
+                            {/* Fail Reasons (only shown when there are failing dimensions) */}
+                            {result.response &&
+                              !result.response.scorecard.overall_pass &&
+                              result.response.scorecard.dimensions.some(
+                                (dim) => !dim.passed
+                              ) && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {result.response.scorecard.dimensions
+                                    .filter((dim) => !dim.passed)
+                                    .map((dim, i) => (
+                                      <Tooltip key={i}>
+                                        <TooltipTrigger asChild>
+                                          <div className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded border border-red-200 cursor-help">
+                                            {dim.name}
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="max-w-xs">
+                                            {dim.explanation}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ))}
+                                </div>
+                              )}
                           </div>
                         </div>
 
-                        {/* Standard and Difficulty */}
+                        {/* Standard, Difficulty and Actions */}
                         <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -233,6 +324,39 @@ export default function Home() {
                           <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-700">
                             {result.question.difficulty}
                           </div>
+
+                          {/* Refresh Button */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => handleRefreshQuestion(index, e)}
+                            disabled={
+                              refreshingIndices.includes(index) ||
+                              result.isLoading
+                            }
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className={`${
+                                refreshingIndices.includes(index)
+                                  ? 'animate-spin'
+                                  : ''
+                              }`}
+                            >
+                              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                              <path d="M3 3v5h5"></path>
+                            </svg>
+                          </Button>
+
                           <div className="text-gray-400">
                             {expandedCards[index] ? '▲' : '▼'}
                           </div>
@@ -244,27 +368,68 @@ export default function Home() {
                         <CardContent className="pt-0 border-t">
                           <div className="space-y-4 pt-3">
                             <div>
-                              <h3 className="font-medium">Answers:</h3>
-                              <ul className="mt-1 list-disc pl-5">
+                              <div className="mt-2 flex flex-wrap gap-2">
                                 {result.question.answers.map((answer, i) => (
-                                  <li key={i}>
-                                    {answer.label}{' '}
+                                  <div
+                                    key={i}
+                                    className={`flex items-center px-3 py-1.5 rounded-md border ${
+                                      answer.isCorrect
+                                        ? 'bg-gray-100 border-gray-300'
+                                        : 'border-gray-200'
+                                    }`}
+                                  >
+                                    <span className="mr-1.5">
+                                      {answer.isCorrect ? (
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          className="text-gray-700"
+                                        >
+                                          <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                          ></circle>
+                                          <path d="m9 12 2 2 4-4"></path>
+                                        </svg>
+                                      ) : (
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="14"
+                                          height="14"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          className="text-gray-400"
+                                        >
+                                          <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                          ></circle>
+                                        </svg>
+                                      )}
+                                    </span>
                                     <span
                                       className={
-                                        answer.isCorrect
-                                          ? 'text-green-500'
-                                          : 'text-red-500'
+                                        answer.isCorrect ? 'font-medium' : ''
                                       }
                                     >
-                                      (
-                                      {answer.isCorrect
-                                        ? 'Correct'
-                                        : 'Incorrect'}
-                                      )
+                                      <MathRenderer content={answer.label} />
                                     </span>
-                                  </li>
+                                  </div>
                                 ))}
-                              </ul>
+                              </div>
                             </div>
 
                             <div>
@@ -294,20 +459,15 @@ export default function Home() {
                                     </span>
                                   </div>
                                   <div className="divide-y">
-                                    {result.response.scorecard.dimensions.map(
-                                      (dim, i) => (
+                                    {result.response.scorecard.dimensions
+                                      .filter((dim) => !dim.passed)
+                                      .map((dim, i) => (
                                         <div
                                           key={i}
                                           className="p-3 flex items-start"
                                         >
-                                          <div
-                                            className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${
-                                              dim.passed
-                                                ? 'bg-green-100'
-                                                : 'bg-red-100'
-                                            }`}
-                                          >
-                                            {dim.passed ? '✓' : '✗'}
+                                          <div className="w-6 h-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0 bg-red-100">
+                                            ✗
                                           </div>
                                           <div className="flex-row">
                                             <div className="font-medium">
@@ -318,7 +478,39 @@ export default function Home() {
                                             </div>
                                           </div>
                                         </div>
-                                      )
+                                      ))}
+
+                                    {result.response.scorecard.dimensions.some(
+                                      (dim) => dim.passed
+                                    ) && (
+                                      <div className="p-3">
+                                        <div className="font-medium mb-2">
+                                          Passing Checks:
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {result.response.scorecard.dimensions
+                                            .filter((dim) => dim.passed)
+                                            .map((dim, i) => (
+                                              <Tooltip key={i}>
+                                                <TooltipTrigger asChild>
+                                                  <div className="px-3 py-1.5 bg-green-100 text-green-800 rounded-full flex items-center cursor-help">
+                                                    <div className="w-4 h-4 rounded-full flex items-center justify-center mr-1.5 bg-green-200 text-green-800">
+                                                      ✓
+                                                    </div>
+                                                    <span className="text-sm font-medium">
+                                                      {dim.name}
+                                                    </span>
+                                                  </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p className="max-w-xs">
+                                                    {dim.explanation}
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            ))}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 </div>

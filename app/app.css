@@ -225,3 +225,37 @@
 
   --color-sidebar-ring: var(--sidebar-ring);
 }
+
+/* Math renderer styles */
+.math-renderer {
+  display: inline;
+}
+
+.math-renderer .katex {
+  font-size: 1.1em;
+}
+
+.math-renderer .katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5em 0;
+}
+
+.math-error {
+  color: #e53e3e;
+  font-family: monospace;
+  background-color: #fff5f5;
+  padding: 0.25em 0.5em;
+  border-radius: 0.25em;
+}
+
+/* Question display styles */
+.question-full {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.question-full .math-renderer {
+  margin: 0.5em 0;
+}
