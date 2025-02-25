@@ -205,6 +205,24 @@ export default function Home() {
     }
   };
 
+  // Function to handle removing a single question
+  const handleRemoveQuestion = (index: number, event: React.MouseEvent) => {
+    // Prevent the card from expanding when clicking the remove button
+    event.stopPropagation();
+
+    // Create a copy of the current results
+    const updatedResults = [...results];
+
+    // Remove the question at the specified index
+    updatedResults.splice(index, 1);
+
+    // Update the state with the new results
+    setResults(updatedResults);
+
+    // Save the updated results to local storage
+    saveResults(updatedResults);
+  };
+
   // Toggle filter function
   const toggleFilter = (filterType: FilterType) => {
     setActiveFilter((prev) => (prev === filterType ? 'all' : filterType));
@@ -480,7 +498,7 @@ export default function Home() {
                     return (
                       <Card
                         key={originalIndex}
-                        className={`text-sm cursor-pointer transition-all py-2 duration-200 hover:shadow-md ${
+                        className={`text-sm cursor-pointer transition-all py-2 duration-200 hover:shadow-md group ${
                           expandedCards[originalIndex]
                             ? 'border-blue-200'
                             : 'border-gray-200'
@@ -548,30 +566,13 @@ export default function Home() {
                                 )}
                             </div>
                           </div>
-
-                          {/* Standard, Difficulty and Actions */}
-                          <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="text-xs text-gray-500 cursor-help">
-                                  {result.question.standard}
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="max-w-xs">
-                                  {result.question.statement}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-700">
-                              {result.question.difficulty}
-                            </div>
-
+                          {/* Action buttons container with hover effect */}
+                          <div className="flex items-center space-x-2 relative">
                             {/* Refresh Button */}
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 opacity-0 scale-75 transform transition-all duration-200 ease-in-out hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 group-hover:scale-100"
                               onClick={(e) =>
                                 handleRefreshQuestion(originalIndex, e)
                               }
@@ -600,6 +601,51 @@ export default function Home() {
                                 <path d="M3 3v5h5"></path>
                               </svg>
                             </Button>
+
+                            {/* Remove Button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 p-0 opacity-0 scale-75 transform transition-all duration-200 delay-75 ease-in-out text-red-500 hover:text-red-700 hover:bg-red-50 group-hover:opacity-100 group-hover:scale-100"
+                              onClick={(e) =>
+                                handleRemoveQuestion(originalIndex, e)
+                              }
+                              disabled={result.isLoading}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M3 6h18"></path>
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                              </svg>
+                            </Button>
+                          </div>
+                          {/* Standard, Difficulty and Actions */}
+                          <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-xs text-gray-500 cursor-help">
+                                  {result.question.standard}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs">
+                                  {result.question.statement}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-700">
+                              {result.question.difficulty}
+                            </div>
 
                             <div className="text-gray-400">
                               {expandedCards[originalIndex] ? '▲' : '▼'}
