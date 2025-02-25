@@ -14,6 +14,7 @@ import { getResults, clearResults, saveResults } from '../lib/storageService';
 import { graderWorkerService } from '../lib/workerService';
 import { MathRenderer } from '../components/MathRenderer';
 import { gradeQuestion } from '../lib/questionApi';
+import { DifficultyPieChart } from '../components/DifficultyPieChart';
 
 // Define filter types
 type FilterType = 'all' | 'errors' | 'success' | 'loading';
@@ -27,6 +28,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   const [isImporterOpen, setIsImporterOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [results, setResults] = useState<QuestionResult[]>([]);
   const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>(
     {}
@@ -455,6 +457,287 @@ export default function Home() {
                     >
                       Clear Results
                     </Button>
+                    <Dialog open={isStatsOpen} onOpenChange={setIsStatsOpen}>
+                      <DialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="text-xs h-8"
+                          disabled={results.length === 0}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-1"
+                          >
+                            <path d="M3 3v18h18"></path>
+                            <path d="M18 17V9"></path>
+                            <path d="M13 17V5"></path>
+                            <path d="M8 17v-3"></path>
+                          </svg>
+                          Stats
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-4xl bg-white w-[90vw] max-h-[90vh] overflow-y-auto">
+                        <div className="p-4">
+                          <h2 className="text-2xl font-bold mb-6">
+                            Question Statistics
+                          </h2>
+
+                          {/* Overall Stats */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            <Card className="bg-blue-50 border-blue-200">
+                              <CardContent className="pt-6">
+                                <div className="text-center">
+                                  <div className="text-4xl font-bold text-blue-700">
+                                    {results.length}
+                                  </div>
+                                  <div className="text-sm text-blue-600 mt-1">
+                                    Total Questions
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-green-50 border-green-200">
+                              <CardContent className="pt-6">
+                                <div className="text-center">
+                                  <div className="text-4xl font-bold text-green-700">
+                                    {successCount}
+                                  </div>
+                                  <div className="text-sm text-green-600 mt-1">
+                                    Successful
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-red-50 border-red-200">
+                              <CardContent className="pt-6">
+                                <div className="text-center">
+                                  <div className="text-4xl font-bold text-red-700">
+                                    {errorCount}
+                                  </div>
+                                  <div className="text-sm text-red-600 mt-1">
+                                    Errors
+                                  </div>
+                                  <div className="text-xs text-red-500 mt-1">
+                                    {results.length > 0
+                                      ? `(${(
+                                          (errorCount / results.length) *
+                                          100
+                                        ).toFixed(1)}%)`
+                                      : '(0%)'}
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          {/* Questions by Standard */}
+                          <div className="mb-8">
+                            <div className="bg-white rounded-lg border p-4">
+                              {(() => {
+                                // Group questions by standard
+                                const standardCounts: Record<string, number> =
+                                  {};
+                                results.forEach((result) => {
+                                  const standard = result.question.standard;
+                                  standardCounts[standard] =
+                                    (standardCounts[standard] || 0) + 1;
+                                });
+
+                                // Sort standards by count (descending)
+                                const sortedStandards = Object.entries(
+                                  standardCounts
+                                ).sort((a, b) => b[1] - a[1]);
+
+                                return (
+                                  <div className="space-y-3">
+                                    {sortedStandards.length > 0 ? (
+                                      sortedStandards.map(
+                                        ([standard, count]) => (
+                                          <div
+                                            key={standard}
+                                            className="flex items-center"
+                                          >
+                                            <div
+                                              className="w-1/3 font-medium truncate"
+                                              title={standard}
+                                            >
+                                              {standard}
+                                            </div>
+                                            <div className="w-2/3 pl-4">
+                                              <div className="relative pt-1">
+                                                <div className="flex items-center justify-between">
+                                                  <div>
+                                                    <span className="text-xs font-semibold inline-block text-blue-600">
+                                                      {count} questions
+                                                    </span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-xs font-semibold inline-block text-blue-600">
+                                                      {(
+                                                        (count /
+                                                          results.length) *
+                                                        100
+                                                      ).toFixed(1)}
+                                                      %
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                                <div className="overflow-hidden h-2 text-xs flex rounded bg-blue-100 mt-1">
+                                                  <div
+                                                    style={{
+                                                      width: `${
+                                                        (count /
+                                                          results.length) *
+                                                        100
+                                                      }%`,
+                                                    }}
+                                                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
+                                                  ></div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      )
+                                    ) : (
+                                      <div className="text-gray-500 text-center py-4">
+                                        No data available
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+
+                          {/* Questions by Difficulty */}
+                          <div className="mb-8 flex justify-between gap-4">
+                            {(() => {
+                              // Group questions by difficulty
+                              const difficultyCounts: Record<number, number> =
+                                {};
+                              results.forEach((result) => {
+                                const difficulty = result.question.difficulty;
+                                difficultyCounts[difficulty] =
+                                  (difficultyCounts[difficulty] || 0) + 1;
+                              });
+
+                              return Object.keys(difficultyCounts).length >
+                                0 ? (
+                                <DifficultyPieChart
+                                  difficultyCounts={difficultyCounts}
+                                  totalQuestions={results.length}
+                                />
+                              ) : (
+                                <div className="text-gray-500 text-center py-4">
+                                  No data available
+                                </div>
+                              );
+                            })()}
+                            <div>
+                              <div className="bg-white rounded-lg border p-4">
+                                {(() => {
+                                  // Group questions by error dimension
+                                  const errorDimensions: Record<
+                                    string,
+                                    number
+                                  > = {};
+
+                                  results.forEach((result) => {
+                                    if (
+                                      result.response &&
+                                      !result.response.scorecard.overall_pass
+                                    ) {
+                                      result.response.scorecard.dimensions.forEach(
+                                        (dim) => {
+                                          if (!dim.passed) {
+                                            errorDimensions[dim.name] =
+                                              (errorDimensions[dim.name] || 0) +
+                                              1;
+                                          }
+                                        }
+                                      );
+                                    }
+                                  });
+
+                                  // Sort error dimensions by count (descending)
+                                  const sortedErrorDimensions = Object.entries(
+                                    errorDimensions
+                                  ).sort((a, b) => b[1] - a[1]);
+
+                                  return (
+                                    <div className="space-y-3">
+                                      {sortedErrorDimensions.length > 0 ? (
+                                        sortedErrorDimensions.map(
+                                          ([dimension, count]) => (
+                                            <div
+                                              key={dimension}
+                                              className="flex items-center"
+                                            >
+                                              <div
+                                                className="w-1/3 font-medium truncate"
+                                                title={dimension}
+                                              >
+                                                {dimension}
+                                              </div>
+                                              <div className="w-2/3 pl-4">
+                                                <div className="relative pt-1">
+                                                  <div className="flex items-center justify-between">
+                                                    <div>
+                                                      <span className="text-xs font-semibold inline-block text-red-600">
+                                                        {count} questions
+                                                      </span>
+                                                    </div>
+                                                    <div>
+                                                      <span className="text-xs font-semibold inline-block text-red-600">
+                                                        {(
+                                                          (count / errorCount) *
+                                                          100
+                                                        ).toFixed(1)}
+                                                        % of errors
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                  <div className="overflow-hidden h-2 text-xs flex rounded bg-red-100 mt-1">
+                                                    <div
+                                                      style={{
+                                                        width: `${
+                                                          (count / errorCount) *
+                                                          100
+                                                        }%`,
+                                                      }}
+                                                      className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-500"
+                                                    ></div>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )
+                                        )
+                                      ) : (
+                                        <div className="text-gray-500 text-center py-4">
+                                          No error data available
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Questions by Error Type */}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
 
