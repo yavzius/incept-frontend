@@ -60,12 +60,12 @@ export async function gradeQuestion(question: Question): Promise<ApiResponse> {
  * Processes an array of questions, grading each one
  * @param questions Array of questions to grade
  * @param onProgress Optional callback to report progress
- * @returns Promise that resolves when all questions are processed
+ * @returns The results array immediately, which will be updated as questions are processed
  */
-export async function processQuestions(
+export function processQuestions(
     questions: Question[],
     onProgress?: (results: QuestionResult[]) => void
-): Promise<QuestionResult[]> {
+): QuestionResult[] {
     // Initialize results with loading state
     const results: QuestionResult[] = questions.map((question) => ({
         question,
@@ -77,8 +77,8 @@ export async function processQuestions(
         onProgress([...results]);
     }
 
-    // Process questions in parallel
-    const processPromises = questions.map(async (question, index) => {
+    // Process questions in parallel without blocking
+    questions.forEach(async (question, index) => {
         try {
             const response = await gradeQuestion(question);
 
@@ -108,8 +108,6 @@ export async function processQuestions(
         }
     });
 
-    // Wait for all questions to be processed
-    await Promise.all(processPromises);
-
+    // Return results immediately, they will be updated as processing completes
     return results;
 } 

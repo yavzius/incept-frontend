@@ -16,7 +16,7 @@ import { MathRenderer } from '../components/MathRenderer';
 import { gradeQuestion } from '../lib/questionApi';
 
 // Define filter types
-type FilterType = 'all' | 'errors' | 'success';
+type FilterType = 'all' | 'errors' | 'success' | 'loading';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -213,12 +213,16 @@ export default function Home() {
   // Count of error questions
   const errorCount = results.filter(
     (result) =>
-      result.error ||
-      (result.response && !result.response.scorecard.overall_pass)
+      !result.isLoading &&
+      (result.error ||
+        (result.response && !result.response.scorecard.overall_pass))
   ).length;
 
+  // Count of loading questions
+  const loadingCount = results.filter((result) => result.isLoading).length;
+
   // Count of success questions
-  const successCount = results.length - errorCount;
+  const successCount = results.length - errorCount - loadingCount;
 
   // Filter results based on the active filter
   const filteredResults = (() => {
@@ -226,16 +230,20 @@ export default function Home() {
       case 'errors':
         return results.filter(
           (result) =>
-            result.error ||
-            (result.response && !result.response.scorecard.overall_pass)
+            !result.isLoading &&
+            (result.error ||
+              (result.response && !result.response.scorecard.overall_pass))
         );
       case 'success':
         return results.filter(
           (result) =>
+            !result.isLoading &&
             !result.error &&
             result.response &&
             result.response.scorecard.overall_pass
         );
+      case 'loading':
+        return results.filter((result) => result.isLoading);
       case 'all':
       default:
         return results;
@@ -357,6 +365,40 @@ export default function Home() {
                           )}
                         </div>
                       )}
+
+                      {/* Loading filter card */}
+                      {loadingCount > 0 && (
+                        <div
+                          className={`flex items-center px-2 py-1 rounded border text-xs cursor-pointer transition-all duration-200 ${
+                            activeFilter === 'loading'
+                              ? 'bg-blue-100 border-blue-300 text-blue-700 shadow-sm'
+                              : 'bg-white border-gray-200 text-gray-700 hover:bg-blue-50'
+                          }`}
+                          onClick={() => toggleFilter('loading')}
+                        >
+                          <div className="w-4 h-4 rounded-full flex items-center justify-center mr-1.5 bg-blue-100 text-blue-500">
+                            <div className="animate-spin h-3 w-3 border-b-2 border-blue-500 rounded-full"></div>
+                          </div>
+                          <span className="font-medium">{loadingCount}</span>
+                          {activeFilter === 'loading' && (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="ml-1"
+                            >
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -415,7 +457,12 @@ export default function Home() {
                   <div className="p-3 text-center">
                     <div className="inline-flex items-center px-3 py-1.5 rounded border border-gray-200 bg-gray-50 text-sm">
                       <span className="text-gray-600 mr-2">
-                        No {activeFilter === 'errors' ? 'error' : 'successful'}{' '}
+                        No{' '}
+                        {activeFilter === 'errors'
+                          ? 'error'
+                          : activeFilter === 'success'
+                          ? 'successful'
+                          : 'loading'}{' '}
                         questions found
                       </span>
                       <div
