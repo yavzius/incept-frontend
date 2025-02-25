@@ -9,12 +9,27 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '../components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from '../components/ui/dropdown-menu';
 import type { QuestionResult } from '../lib/questionApi';
-import { getResults, clearResults, saveResults } from '../lib/storageService';
+import {
+  getResults,
+  clearResults,
+  saveResults,
+  getIgnoredDimensions,
+  saveIgnoredDimensions,
+} from '../lib/storageService';
 import { graderWorkerService } from '../lib/workerService';
 import { MathRenderer } from '../components/MathRenderer';
 import { gradeQuestion } from '../lib/questionApi';
 import { DifficultyPieChart } from '../components/DifficultyPieChart';
+import { ErrorDimensionsRadarChart } from '../components/ErrorDimensionsRadarChart';
 
 // Define filter types
 type FilterType = 'all' | 'errors' | 'success' | 'loading';
@@ -36,6 +51,8 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [refreshingIndices, setRefreshingIndices] = useState<number[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [ignoredDimensions, setIgnoredDimensions] = useState<string[]>([]);
+  const [allErrorDimensions, setAllErrorDimensions] = useState<string[]>([]);
 
   // Load results from local storage on component mount
   useEffect(() => {
@@ -43,6 +60,10 @@ export default function Home() {
     if (savedResults.length > 0) {
       setResults(savedResults);
     }
+
+    // Load ignored dimensions
+    const savedIgnoredDimensions = getIgnoredDimensions();
+    setIgnoredDimensions(savedIgnoredDimensions);
 
     // Initialize the worker service
     graderWorkerService.initialize();
@@ -74,6 +95,24 @@ export default function Home() {
       graderWorkerService.unregisterCompleteCallback();
     };
   }, []);
+
+  // Function to collect all error dimensions from results
+  useEffect(() => {
+    // Extract all unique error dimensions from the results
+    const dimensions = new Set<string>();
+
+    results.forEach((result) => {
+      if (result.response && !result.response.scorecard.overall_pass) {
+        result.response.scorecard.dimensions.forEach((dim) => {
+          if (!dim.passed) {
+            dimensions.add(dim.name);
+          }
+        });
+      }
+    });
+
+    setAllErrorDimensions(Array.from(dimensions).sort());
+  }, [results]);
 
   // Function to handle receiving results from the JsonImporter
   const handleImportResults = (importedResults: QuestionResult[]) => {
@@ -230,37 +269,48 @@ export default function Home() {
     setActiveFilter((prev) => (prev === filterType ? 'all' : filterType));
   };
 
-  // Count of error questions
-  const errorCount = results.filter(
-    (result) =>
-      !result.isLoading &&
-      (result.error ||
-        (result.response && !result.response.scorecard.overall_pass))
-  ).length;
+  // Function to toggle a dimension's ignored status
+  const toggleDimensionIgnore = (dimension: string) => {
+    const updatedIgnoredDimensions = ignoredDimensions.includes(dimension)
+      ? ignoredDimensions.filter((dim) => dim !== dimension)
+      : [...ignoredDimensions, dimension];
+
+    setIgnoredDimensions(updatedIgnoredDimensions);
+    saveIgnoredDimensions(updatedIgnoredDimensions);
+  };
+
+  // Helper function to check if a question has errors that aren't ignored
+  const hasRelevantErrors = (result: QuestionResult) => {
+    if (result.isLoading) return false;
+    if (result.error) return true;
+
+    if (result.response && !result.response.scorecard.overall_pass) {
+      // Check if there are any failing dimensions that aren't ignored
+      return result.response.scorecard.dimensions.some(
+        (dim) => !dim.passed && !ignoredDimensions.includes(dim.name)
+      );
+    }
+
+    return false;
+  };
+
+  // Count of error questions (excluding ignored dimensions)
+  const errorCount = results.filter(hasRelevantErrors).length;
 
   // Count of loading questions
   const loadingCount = results.filter((result) => result.isLoading).length;
 
-  // Count of success questions
+  // Count of success questions (now includes questions with only ignored errors)
   const successCount = results.length - errorCount - loadingCount;
 
   // Filter results based on the active filter
   const filteredResults = (() => {
     switch (activeFilter) {
       case 'errors':
-        return results.filter(
-          (result) =>
-            !result.isLoading &&
-            (result.error ||
-              (result.response && !result.response.scorecard.overall_pass))
-        );
+        return results.filter(hasRelevantErrors);
       case 'success':
         return results.filter(
-          (result) =>
-            !result.isLoading &&
-            !result.error &&
-            result.response &&
-            result.response.scorecard.overall_pass
+          (result) => !result.isLoading && !hasRelevantErrors(result)
         );
       case 'loading':
         return results.filter((result) => result.isLoading);
@@ -457,6 +507,61 @@ export default function Home() {
                     >
                       Clear Results
                     </Button>
+
+                    {/* Ignored Dimensions Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="text-xs h-8"
+                          disabled={allErrorDimensions.length === 0}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-1"
+                          >
+                            <path d="M9 14 4 9l5-5"></path>
+                            <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H10"></path>
+                          </svg>
+                          Ignore Errors
+                          {ignoredDimensions.length > 0 && (
+                            <span className="ml-1 px-1.5 py-0.5 bg-gray-100 rounded-full text-xs">
+                              {ignoredDimensions.length}
+                            </span>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel>Error Dimensions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {allErrorDimensions.length > 0 ? (
+                          allErrorDimensions.map((dimension) => (
+                            <DropdownMenuCheckboxItem
+                              key={dimension}
+                              checked={ignoredDimensions.includes(dimension)}
+                              onCheckedChange={() =>
+                                toggleDimensionIgnore(dimension)
+                              }
+                            >
+                              {dimension}
+                            </DropdownMenuCheckboxItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-1.5 text-sm text-gray-500">
+                            No error dimensions found
+                          </div>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <Dialog open={isStatsOpen} onOpenChange={setIsStatsOpen}>
                       <DialogTrigger asChild>
                         <Button
@@ -610,7 +715,7 @@ export default function Home() {
                             </div>
                           </div>
 
-                          {/* Questions by Difficulty */}
+                          {/* Questions by Difficulty and Error Dimensions */}
                           <div className="mb-8 flex justify-between gap-4">
                             {(() => {
                               // Group questions by difficulty
@@ -634,96 +739,39 @@ export default function Home() {
                                 </div>
                               );
                             })()}
-                            <div>
-                              <div className="bg-white rounded-lg border p-4">
-                                {(() => {
-                                  // Group questions by error dimension
-                                  const errorDimensions: Record<
-                                    string,
-                                    number
-                                  > = {};
 
-                                  results.forEach((result) => {
-                                    if (
-                                      result.response &&
-                                      !result.response.scorecard.overall_pass
-                                    ) {
-                                      result.response.scorecard.dimensions.forEach(
-                                        (dim) => {
-                                          if (!dim.passed) {
-                                            errorDimensions[dim.name] =
-                                              (errorDimensions[dim.name] || 0) +
-                                              1;
-                                          }
-                                        }
-                                      );
+                            {(() => {
+                              // Group questions by error dimension
+                              const errorDimensions: Record<string, number> =
+                                {};
+
+                              results.forEach((result) => {
+                                if (
+                                  result.response &&
+                                  !result.response.scorecard.overall_pass
+                                ) {
+                                  result.response.scorecard.dimensions.forEach(
+                                    (dim) => {
+                                      if (!dim.passed) {
+                                        errorDimensions[dim.name] =
+                                          (errorDimensions[dim.name] || 0) + 1;
+                                      }
                                     }
-                                  });
-
-                                  // Sort error dimensions by count (descending)
-                                  const sortedErrorDimensions = Object.entries(
-                                    errorDimensions
-                                  ).sort((a, b) => b[1] - a[1]);
-
-                                  return (
-                                    <div className="space-y-3">
-                                      {sortedErrorDimensions.length > 0 ? (
-                                        sortedErrorDimensions.map(
-                                          ([dimension, count]) => (
-                                            <div
-                                              key={dimension}
-                                              className="flex items-center"
-                                            >
-                                              <div
-                                                className="w-1/3 font-medium truncate"
-                                                title={dimension}
-                                              >
-                                                {dimension}
-                                              </div>
-                                              <div className="w-2/3 pl-4">
-                                                <div className="relative pt-1">
-                                                  <div className="flex items-center justify-between">
-                                                    <div>
-                                                      <span className="text-xs font-semibold inline-block text-red-600">
-                                                        {count} questions
-                                                      </span>
-                                                    </div>
-                                                    <div>
-                                                      <span className="text-xs font-semibold inline-block text-red-600">
-                                                        {(
-                                                          (count / errorCount) *
-                                                          100
-                                                        ).toFixed(1)}
-                                                        % of errors
-                                                      </span>
-                                                    </div>
-                                                  </div>
-                                                  <div className="overflow-hidden h-2 text-xs flex rounded bg-red-100 mt-1">
-                                                    <div
-                                                      style={{
-                                                        width: `${
-                                                          (count / errorCount) *
-                                                          100
-                                                        }%`,
-                                                      }}
-                                                      className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-500"
-                                                    ></div>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          )
-                                        )
-                                      ) : (
-                                        <div className="text-gray-500 text-center py-4">
-                                          No error data available
-                                        </div>
-                                      )}
-                                    </div>
                                   );
-                                })()}
-                              </div>
-                            </div>
+                                }
+                              });
+
+                              return Object.keys(errorDimensions).length > 0 ? (
+                                <ErrorDimensionsRadarChart
+                                  errorDimensions={errorDimensions}
+                                  totalErrors={errorCount}
+                                />
+                              ) : (
+                                <div className="text-gray-500 text-center py-4">
+                                  No error data available
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           {/* Questions by Error Type */}
@@ -793,17 +841,45 @@ export default function Home() {
                                 ✗
                               </div>
                             ) : result.response ? (
-                              <div
-                                className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                  result.response.scorecard.overall_pass
-                                    ? 'bg-green-100 text-green-500'
-                                    : 'bg-red-100 text-red-500'
-                                }`}
-                              >
-                                {result.response.scorecard.overall_pass
-                                  ? '✓'
-                                  : '✗'}
-                              </div>
+                              (() => {
+                                // Check if the question failed but all failing dimensions are ignored
+                                const hasOnlyIgnoredErrors =
+                                  !result.response.scorecard.overall_pass &&
+                                  !result.response.scorecard.dimensions.some(
+                                    (dim) =>
+                                      !dim.passed &&
+                                      !ignoredDimensions.includes(dim.name)
+                                  );
+
+                                if (result.response.scorecard.overall_pass) {
+                                  return (
+                                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-green-100 text-green-500">
+                                      ✓
+                                    </div>
+                                  );
+                                } else if (hasOnlyIgnoredErrors) {
+                                  return (
+                                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-100 text-gray-500">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span>✓</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="max-w-xs">
+                                            Passing (ignored errors)
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-red-100 text-red-500">
+                                      ✗
+                                    </div>
+                                  );
+                                }
+                              })()
                             ) : null}
 
                             {/* Question Preview */}
@@ -826,13 +902,32 @@ export default function Home() {
                                       .map((dim, i) => (
                                         <Tooltip key={i}>
                                           <TooltipTrigger asChild>
-                                            <div className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded border border-red-200 cursor-help">
+                                            <div
+                                              className={`px-2 py-0.5 text-xs rounded border cursor-help ${
+                                                ignoredDimensions.includes(
+                                                  dim.name
+                                                )
+                                                  ? 'bg-gray-50 text-gray-500 border-gray-200 line-through'
+                                                  : 'bg-red-50 text-red-700 border-red-200'
+                                              }`}
+                                            >
                                               {dim.name}
+                                              {ignoredDimensions.includes(
+                                                dim.name
+                                              ) && ' (ignored)'}
                                             </div>
                                           </TooltipTrigger>
                                           <TooltipContent>
                                             <p className="max-w-xs">
                                               {dim.explanation}
+                                              {ignoredDimensions.includes(
+                                                dim.name
+                                              ) && (
+                                                <span className="block mt-1 text-gray-500 italic">
+                                                  This error is currently
+                                                  ignored in counts
+                                                </span>
+                                              )}
                                             </p>
                                           </TooltipContent>
                                         </Tooltip>
@@ -1029,18 +1124,115 @@ export default function Home() {
                                         .map((dim, i) => (
                                           <div
                                             key={i}
-                                            className="p-3 flex items-start"
+                                            className={`p-3 flex items-start ${
+                                              ignoredDimensions.includes(
+                                                dim.name
+                                              )
+                                                ? 'bg-gray-50'
+                                                : ''
+                                            }`}
                                           >
-                                            <div className="w-6 h-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0 bg-red-100">
-                                              ✗
+                                            <div
+                                              className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 flex-shrink-0 ${
+                                                ignoredDimensions.includes(
+                                                  dim.name
+                                                )
+                                                  ? 'bg-gray-200 text-gray-500'
+                                                  : 'bg-red-100 text-red-500'
+                                              }`}
+                                            >
+                                              {ignoredDimensions.includes(
+                                                dim.name
+                                              ) ? (
+                                                <svg
+                                                  xmlns="http://www.w3.org/2000/svg"
+                                                  width="14"
+                                                  height="14"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                >
+                                                  <line
+                                                    x1="18"
+                                                    y1="6"
+                                                    x2="6"
+                                                    y2="18"
+                                                  ></line>
+                                                  <line
+                                                    x1="6"
+                                                    y1="6"
+                                                    x2="18"
+                                                    y2="18"
+                                                  ></line>
+                                                </svg>
+                                              ) : (
+                                                '✗'
+                                              )}
                                             </div>
                                             <div className="flex-row">
-                                              <div className="font-medium">
+                                              <div
+                                                className={`font-medium ${
+                                                  ignoredDimensions.includes(
+                                                    dim.name
+                                                  )
+                                                    ? 'text-gray-500'
+                                                    : ''
+                                                }`}
+                                              >
                                                 {dim.name}:{' '}
-                                                <span className="text-sm font-normal text-gray-600">
+                                                <span
+                                                  className={`text-sm font-normal ${
+                                                    ignoredDimensions.includes(
+                                                      dim.name
+                                                    )
+                                                      ? 'text-gray-500'
+                                                      : 'text-gray-600'
+                                                  }`}
+                                                >
                                                   {dim.explanation}
                                                 </span>
+                                                {ignoredDimensions.includes(
+                                                  dim.name
+                                                ) && (
+                                                  <span className="ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                                                    Ignored
+                                                  </span>
+                                                )}
                                               </div>
+                                              {ignoredDimensions.includes(
+                                                dim.name
+                                              ) ? (
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="mt-1 h-7 text-xs"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleDimensionIgnore(
+                                                      dim.name
+                                                    );
+                                                  }}
+                                                >
+                                                  Include in counts
+                                                </Button>
+                                              ) : (
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="mt-1 h-7 text-xs"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleDimensionIgnore(
+                                                      dim.name
+                                                    );
+                                                  }}
+                                                >
+                                                  Ignore this error
+                                                </Button>
+                                              )}
                                             </div>
                                           </div>
                                         ))}

@@ -10,5 +10,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['uuid'],
+    include: ['katex', '@matejmazur/react-katex'],
   },
 });
