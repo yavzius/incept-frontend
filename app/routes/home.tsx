@@ -257,7 +257,7 @@ export default function Home() {
         <div className="p-8">
           {/* Header with import button */}
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Question Grader Dashboard</h1>
+            <h1 className="text-2xl font-bold">Incept Dashboard</h1>
             <Dialog open={isImporterOpen} onOpenChange={setIsImporterOpen}>
               <DialogTrigger asChild>
                 <Button className="flex items-center gap-2">
@@ -287,17 +287,13 @@ export default function Home() {
             </Dialog>
           </div>
 
-          <p className="text-gray-600 mb-6">
-            View and analyze graded questions here.
-          </p>
-
           {/* Main content - Display results or placeholder */}
           <div className="bg-white rounded-lg shadow p-6">
             {results.length > 0 ? (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-bold">Lesson Content</h2>
+                    <h2 className="text-lg font-bold">Questions</h2>
                     <div className="flex gap-2">
                       {errorCount > 0 && (
                         <div
@@ -484,8 +480,10 @@ export default function Home() {
                     return (
                       <Card
                         key={originalIndex}
-                        className={`text-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
-                          expandedCards[originalIndex] ? 'border-blue-200' : ''
+                        className={`text-sm cursor-pointer transition-all py-2 duration-200 hover:shadow-md ${
+                          expandedCards[originalIndex]
+                            ? 'border-blue-200'
+                            : 'border-gray-200'
                         }`}
                         onClick={() => toggleCardExpansion(originalIndex)}
                       >
