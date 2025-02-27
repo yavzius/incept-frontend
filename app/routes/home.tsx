@@ -3,8 +3,8 @@ import { QuestionDashboard } from '../features/questions/components';
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: 'JSON Question Grader' },
-    { name: 'description', content: 'Grade questions using the API' },
+    { title: 'Incept AI' },
+    { name: 'description', content: 'Generate Questions using API' },
   ];
 }
 

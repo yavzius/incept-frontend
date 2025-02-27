@@ -75,7 +75,7 @@ export function QuestionDashboard() {
         <div className="p-8">
           {/* Header with import button */}
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Incept Dashboard</h1>
+            <h1 className="text-2xl font-bold">Incept</h1>
             <div className="flex gap-2">
               <Button
                 variant="outline"
