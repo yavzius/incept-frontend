@@ -6,6 +6,7 @@ import {
   DialogTrigger,
 } from '@/shared/components/ui/dialog';
 import { JsonImporter } from '@/features/importer/components/JsonImporter';
+import { GenerateDialog } from '@/features/generate/components';
 import { FilterBar } from '@/features/questions/components/FilterBar';
 import { ActionBar } from '@/features/questions/components/ActionBar';
 import { QuestionList } from '@/features/questions/components/QuestionList';
@@ -176,6 +177,22 @@ export function QuestionDashboard() {
     resetExpandedCards(); // Reset expanded cards when new results are imported
   };
 
+  // Function to handle receiving results from the GenerateDialog
+  const handleGenerateResults = (response: any) => {
+    if (response && response.questions) {
+      // Convert the generated questions to QuestionResult format
+      const newResults = response.questions.map((question: any) => ({
+        question,
+        isLoading: false,
+      }));
+
+      // Combine existing results with newly generated results
+      const combinedResults = [...results, ...newResults];
+      updateResults(combinedResults);
+      resetExpandedCards(); // Reset expanded cards when new results are generated
+    }
+  };
+
   // Get filter counts
   const { errorCount, successCount, loadingCount, standardCounts } =
     getFilterCounts(results, ignoredDimensions);
@@ -226,6 +243,11 @@ export function QuestionDashboard() {
                   </>
                 )}
               </Button>
+              <GenerateDialog
+                results={results}
+                onSuccess={handleGenerateResults}
+                triggerLabel="Generate Questions"
+              />
               <Dialog open={isImporterOpen} onOpenChange={setIsImporterOpen}>
                 <DialogTrigger asChild>
                   <Button className="flex items-center gap-2">

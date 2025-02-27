@@ -175,6 +175,14 @@ export function FilterBar({
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
+            {selectedStandard && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setStandardFilter(null)}>
+                  Clear filter
+                </DropdownMenuItem>
+              </>
+            )}
             {standards.map((standard) => (
               <DropdownMenuItem
                 key={standard}
@@ -189,14 +197,6 @@ export function FilterBar({
                 </span>
               </DropdownMenuItem>
             ))}
-            {selectedStandard && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setStandardFilter(null)}>
-                  Clear filter
-                </DropdownMenuItem>
-              </>
-            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}

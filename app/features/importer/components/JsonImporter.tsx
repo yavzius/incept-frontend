@@ -23,7 +23,6 @@ export function JsonImporter({ onImportResults }: JsonImporterProps) {
   const {
     jsonInput,
     setJsonInput,
-    results,
     isSubmitting,
     error,
     filteredQuestions,

@@ -167,6 +167,11 @@ export function QuestionCard({
           <div className="flex-grow">
             <div className="line-clamp-2 text-sm">
               <MathRenderer content={result.question.question} />
+              {result.question.referenceText && (
+                <span className="text-gray-600 ml-1">
+                  ({result.question.referenceText})
+                </span>
+              )}
             </div>
 
             {result.response &&
