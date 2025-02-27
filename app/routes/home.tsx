@@ -25,6 +25,7 @@ import {
   getIgnoredDimensions,
   saveIgnoredDimensions,
 } from '../lib/storageService';
+import { fetchQuestions } from '../lib/questionService';
 import { graderWorkerService } from '../lib/workerService';
 import { MathRenderer } from '../components/MathRenderer';
 import { gradeQuestion } from '../lib/questionApi';
@@ -53,23 +54,57 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [ignoredDimensions, setIgnoredDimensions] = useState<string[]>([]);
   const [allErrorDimensions, setAllErrorDimensions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load results from local storage on component mount
+  // Load results from API and local storage on component mount
   useEffect(() => {
-    const savedResults = getResults();
-    if (savedResults.length > 0) {
-      setResults(savedResults);
-    }
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
 
-    // Load ignored dimensions
-    const savedIgnoredDimensions = getIgnoredDimensions();
-    setIgnoredDimensions(savedIgnoredDimensions);
+      try {
+        // First try to fetch questions from the API
+        const apiResults = await fetchQuestions();
 
-    // Initialize the worker service
-    graderWorkerService.initialize();
+        if (apiResults.length > 0) {
+          setResults(apiResults);
+          // Save the API results to local storage
+          saveResults(apiResults);
+        } else {
+          // If no API results, fall back to local storage
+          const savedResults = getResults();
+          if (savedResults.length > 0) {
+            setResults(savedResults);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading questions:', err);
+        setError(
+          err instanceof Error ? err.message : 'Failed to load questions'
+        );
 
-    // Check if there's an active processing
-    setIsProcessing(graderWorkerService.isProcessing());
+        // Fall back to local storage if API fails
+        const savedResults = getResults();
+        if (savedResults.length > 0) {
+          setResults(savedResults);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+
+      // Load ignored dimensions
+      const savedIgnoredDimensions = getIgnoredDimensions();
+      setIgnoredDimensions(savedIgnoredDimensions);
+
+      // Initialize the worker service
+      graderWorkerService.initialize();
+
+      // Check if there's an active processing
+      setIsProcessing(graderWorkerService.isProcessing());
+    };
+
+    loadData();
 
     // Set up a listener for worker progress updates
     const handleProgress = (updatedResults: QuestionResult[]) => {
@@ -113,6 +148,25 @@ export default function Home() {
 
     setAllErrorDimensions(Array.from(dimensions).sort());
   }, [results]);
+
+  // Function to manually refresh questions from the API
+  const handleRefreshFromAPI = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const apiResults = await fetchQuestions();
+      setResults(apiResults);
+      saveResults(apiResults);
+    } catch (err) {
+      console.error('Error refreshing questions from API:', err);
+      setError(
+        err instanceof Error ? err.message : 'Failed to refresh questions'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Function to handle receiving results from the JsonImporter
   const handleImportResults = (importedResults: QuestionResult[]) => {
@@ -334,38 +388,99 @@ export default function Home() {
           {/* Header with import button */}
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Incept Dashboard</h1>
-            <Dialog open={isImporterOpen} onOpenChange={setIsImporterOpen}>
-              <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  Import JSON
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-4xl w-[90vw] max-h-[90vh] p-0 bg-white">
-                <div className="h-full w-full overflow-hidden">
-                  <JsonImporter onImportResults={handleImportResults} />
-                </div>
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handleRefreshFromAPI}
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-b-2 border-blue-700 rounded-full"></div>
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                      <path d="M3 3v5h5"></path>
+                    </svg>
+                    Refresh from API
+                  </>
+                )}
+              </Button>
+              <Dialog open={isImporterOpen} onOpenChange={setIsImporterOpen}>
+                <DialogTrigger asChild>
+                  <Button className="flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Import JSON
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-4xl w-[90vw] max-h-[90vh] p-0 bg-white">
+                  <div className="h-full w-full overflow-hidden">
+                    <JsonImporter onImportResults={handleImportResults} />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           {/* Main content - Display results or placeholder */}
           <div className="bg-white rounded-lg shadow p-6">
-            {results.length > 0 ? (
+            {/* Show error message if there was an error */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded flex items-center gap-2 border border-red-200">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Show loading indicator when initially loading */}
+            {isLoading && results.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin h-10 w-10 border-b-2 border-blue-700 rounded-full mb-4"></div>
+                <p className="text-gray-600">Loading questions from API...</p>
+              </div>
+            ) : results.length > 0 ? (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-4">
