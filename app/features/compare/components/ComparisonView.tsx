@@ -1,12 +1,14 @@
-import React from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from './ui/card';
-import type { ComparisonResult, ScoreCardDimension } from '../lib/questionApi';
+} from '@/shared/components/ui/card';
+import type {
+  ComparisonResult,
+  ScoreCardDimension,
+} from '../../../lib/questionApi';
 
 interface ComparisonViewProps {
   result: ComparisonResult;

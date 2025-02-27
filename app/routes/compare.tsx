@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import ApiComparison from '../components/ApiComparison';
+import ApiComparison from '../features/compare/components/ApiComparison';
 import type { Question } from '../lib/questionApi';
 import { getResults } from '../lib/storageService';
 

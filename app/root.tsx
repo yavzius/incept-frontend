@@ -26,9 +26,8 @@ export const links: Route.LinksFunction = () => [
 // This script runs on the client to handle dark mode
 const themeScript = `
   let isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  let storedTheme = localStorage.getItem('theme');
-  
-  if (storedTheme === 'dark' || (!storedTheme && isDarkMode)) {
+
+  if (isDarkMode) {
     document.documentElement.classList.add('dark');
   } else {
     document.documentElement.classList.remove('dark');

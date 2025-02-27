@@ -1,8 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
-import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { Button } from '@/shared/components/ui/button';
+import { Textarea } from '@/shared/components/ui/textarea';
+import { Label } from '@/shared/components/ui/label';
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from '@/shared/components/ui/alert';
 import {
   Card,
   CardHeader,
@@ -10,9 +14,13 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from './ui/card';
-import type { Question, QuestionResult, ApiResponse } from '../lib/questionApi';
-import { graderWorkerService } from '../lib/workerService';
+} from '@/shared/components/ui/card';
+import type {
+  Question,
+  QuestionResult,
+  ApiResponse,
+} from '../../../lib/questionApi';
+import { graderWorkerService } from '../../../lib/workerService';
 
 interface JsonImporterProps {
   onImportResults?: (results: QuestionResult[]) => void;

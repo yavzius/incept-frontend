@@ -1,47 +1,40 @@
 import type { QuestionResult } from './questionApi';
 
-const STORAGE_KEY = 'question_grader_results';
+// In-memory storage for question results
+let questionResults: QuestionResult[] = [];
+
+// Constants for localStorage
 const IGNORED_DIMENSIONS_KEY = 'ignored_error_dimensions';
 
 /**
- * Saves question results to local storage
+ * Saves question results to in-memory storage
  * @param results The results to save
  */
 export function saveResults(results: QuestionResult[]): void {
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(results));
+        questionResults = [...results];
     } catch (error) {
-        console.error('Failed to save results to local storage:', error);
+        console.error('Failed to save results:', error);
     }
 }
 
 /**
- * Retrieves question results from local storage
+ * Retrieves question results from in-memory storage
  * @returns The saved results or an empty array if none exist
  */
 export function getResults(): QuestionResult[] {
-    try {
-        const savedResults = localStorage.getItem(STORAGE_KEY);
-        return savedResults ? JSON.parse(savedResults) : [];
-    } catch (error) {
-        console.error('Failed to retrieve results from local storage:', error);
-        return [];
-    }
+    return [...questionResults];
 }
 
 /**
- * Clears all saved results from local storage
+ * Clears all saved results from in-memory storage
  */
 export function clearResults(): void {
-    try {
-        localStorage.removeItem(STORAGE_KEY);
-    } catch (error) {
-        console.error('Failed to clear results from local storage:', error);
-    }
+    questionResults = [];
 }
 
 /**
- * Saves ignored error dimensions to local storage
+ * Saves ignored error dimensions to localStorage
  * @param dimensions The error dimensions to ignore
  */
 export function saveIgnoredDimensions(dimensions: string[]): void {
@@ -53,7 +46,7 @@ export function saveIgnoredDimensions(dimensions: string[]): void {
 }
 
 /**
- * Retrieves ignored error dimensions from local storage
+ * Retrieves ignored error dimensions from localStorage
  * @returns The saved ignored dimensions or an empty array if none exist
  */
 export function getIgnoredDimensions(): string[] {
@@ -67,7 +60,7 @@ export function getIgnoredDimensions(): string[] {
 }
 
 /**
- * Clears all saved ignored dimensions from local storage
+ * Clears all saved ignored dimensions from localStorage
  */
 export function clearIgnoredDimensions(): void {
     try {

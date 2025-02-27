@@ -1,11 +1,18 @@
-import React from 'react';
 import { TrendingUp } from 'lucide-react';
-import { LabelList, Pie, PieChart, Cell, ResponsiveContainer } from 'recharts';
+import { Pie, PieChart, Cell, ResponsiveContainer } from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
-import type { ChartConfig } from './ui/chart';
-
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/shared/components/ui/chart';
 interface DifficultyPieChartProps {
   difficultyCounts: Record<number, number>;
   totalQuestions: number;

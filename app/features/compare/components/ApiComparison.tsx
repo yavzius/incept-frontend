@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { comparisonWorkerService } from '../lib/comparisonWorkerService';
-import type { ComparisonResult, Question } from '../lib/questionApi';
-import { Button } from './ui/button';
+import { comparisonWorkerService } from '../../../lib/comparisonWorkerService';
+import type { ComparisonResult, Question } from '../../../lib/questionApi';
+import { Button } from '@/shared/components/ui/button';
 import ComparisonView from './ComparisonView';
 import {
   Dialog,
@@ -9,8 +9,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from './ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+} from '@/shared/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/shared/components/ui/tabs';
 
 interface ApiComparisonProps {
   questions: Question[];

@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp } from 'lucide-react';
 import {
   PolarAngleAxis,
@@ -8,10 +7,17 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart';
-import type { ChartConfig } from './ui/chart';
-
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/shared/components/ui/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/shared/components/ui/chart';
 interface ErrorDimensionsRadarChartProps {
   errorDimensions: Record<string, number>;
   totalErrors: number;
