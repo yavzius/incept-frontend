@@ -87,7 +87,7 @@ export function QuestionList({
             {!areAllSelected && (
               <Button
                 variant="link"
-                className="text-sm text-blue-600 p-0 h-auto ml-2"
+                className="text-sm text-black p-0 h-auto ml-2"
                 onClick={handleSelectAllToggle}
               >
                 Select all in this list
@@ -97,7 +97,7 @@ export function QuestionList({
 
           {/* Action buttons - always visible in the same row */}
           <div className="flex items-center gap-2">
-            {selectedCount > 0 && (
+            {selectedCount > 0 ? (
               <>
                 <Button variant="outline" size="sm" className="text-xs">
                   Export
@@ -106,6 +106,15 @@ export function QuestionList({
                   Delete
                 </Button>
               </>
+            ) : (
+              <div className="invisible flex items-center gap-2">
+                <Button variant="outline" size="sm" className="text-xs">
+                  Export
+                </Button>
+                <Button variant="outline" size="sm" className="text-xs">
+                  Delete
+                </Button>
+              </div>
             )}
           </div>
         </div>

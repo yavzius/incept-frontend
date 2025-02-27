@@ -15,6 +15,7 @@ import {
   useExpandedCards,
   useFilter,
   useErrorDimensions,
+  useStandards,
 } from '@/features/questions/hooks';
 import type { QuestionResult } from '@/features/questions/types';
 import { gradeQuestion } from '@/features/questions/services/questionApi';
@@ -42,9 +43,16 @@ export function QuestionDashboard() {
   const { ignoredDimensions, toggleDimensionIgnore } = useIgnoredDimensions();
   const { expandedCards, toggleCardExpansion, resetExpandedCards } =
     useExpandedCards();
-  const { activeFilter, toggleFilter, filterResults, getFilterCounts } =
-    useFilter();
+  const {
+    activeFilter,
+    toggleFilter,
+    filterResults,
+    getFilterCounts,
+    selectedStandard,
+    setStandardFilter,
+  } = useFilter();
   const { allErrorDimensions } = useErrorDimensions(results);
+  const { standards } = useStandards(results);
 
   // Function to toggle selection of a question
   const toggleQuestionSelection = (index: number) => {
@@ -169,10 +177,8 @@ export function QuestionDashboard() {
   };
 
   // Get filter counts
-  const { errorCount, successCount, loadingCount } = getFilterCounts(
-    results,
-    ignoredDimensions
-  );
+  const { errorCount, successCount, loadingCount, standardCounts } =
+    getFilterCounts(results, ignoredDimensions);
 
   // Filter results based on the active filter
   const filteredResults = filterResults(results, ignoredDimensions);
@@ -284,13 +290,16 @@ export function QuestionDashboard() {
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-bold">Questions</h2>
                     <FilterBar
                       errorCount={errorCount}
                       successCount={successCount}
                       loadingCount={loadingCount}
                       activeFilter={activeFilter}
                       toggleFilter={toggleFilter}
+                      standards={standards}
+                      standardCounts={standardCounts}
+                      selectedStandard={selectedStandard}
+                      setStandardFilter={setStandardFilter}
                     />
                   </div>
                   <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 // Define filter types
-export type FilterType = 'all' | 'errors' | 'success' | 'loading';
+export type FilterType = 'all' | 'errors' | 'success' | 'loading' | 'standard';
 
 export interface ExpandedCardsState {
     [key: number]: boolean;

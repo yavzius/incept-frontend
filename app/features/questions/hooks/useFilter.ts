@@ -3,10 +3,25 @@ import type { FilterType, QuestionResult } from '../types';
 
 export function useFilter() {
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+    const [selectedStandard, setSelectedStandard] = useState<string | null>(null);
 
     // Toggle filter function
     const toggleFilter = (filterType: FilterType) => {
+        // If switching away from standard filter, clear the selected standard
+        if (activeFilter === 'standard' && filterType !== 'standard') {
+            setSelectedStandard(null);
+        }
         setActiveFilter((prev) => (prev === filterType ? 'all' : filterType));
+    };
+
+    // Function to set the selected standard
+    const setStandardFilter = (standard: string | null) => {
+        setSelectedStandard(standard);
+        if (standard) {
+            setActiveFilter('standard');
+        } else if (activeFilter === 'standard') {
+            setActiveFilter('all');
+        }
     };
 
     // Function to filter results based on the active filter and ignored dimensions
@@ -38,6 +53,10 @@ export function useFilter() {
                 );
             case 'loading':
                 return results.filter((result) => result.isLoading);
+            case 'standard':
+                return results.filter(
+                    (result) => result.question.standard === selectedStandard
+                );
             case 'all':
             default:
                 return results;
@@ -73,10 +92,20 @@ export function useFilter() {
         // Count of success questions (now includes questions with only ignored errors)
         const successCount = results.length - errorCount - loadingCount;
 
+        // Get counts by standard
+        const standardCounts = results.reduce((acc, result) => {
+            const standard = result.question.standard;
+            if (standard) {
+                acc[standard] = (acc[standard] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>);
+
         return {
             errorCount,
             loadingCount,
-            successCount
+            successCount,
+            standardCounts
         };
     };
 
@@ -84,6 +113,8 @@ export function useFilter() {
         activeFilter,
         toggleFilter,
         filterResults,
-        getFilterCounts
+        getFilterCounts,
+        selectedStandard,
+        setStandardFilter
     };
 } 
