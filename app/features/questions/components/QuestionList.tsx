@@ -14,6 +14,8 @@ interface QuestionListProps {
   updateResults: (results: QuestionResult[]) => void;
   addRefreshingIndex: (index: number) => void;
   removeRefreshingIndex: (index: number) => void;
+  selectedQuestions?: Record<number, boolean>;
+  toggleQuestionSelection?: (index: number) => void;
 }
 
 export function QuestionList({
@@ -28,6 +30,8 @@ export function QuestionList({
   updateResults,
   addRefreshingIndex,
   removeRefreshingIndex,
+  selectedQuestions = {},
+  toggleQuestionSelection = () => {},
 }: QuestionListProps) {
   return (
     <div className="space-y-4">
@@ -66,6 +70,8 @@ export function QuestionList({
             addRefreshingIndex={addRefreshingIndex}
             removeRefreshingIndex={removeRefreshingIndex}
             allResults={results}
+            selectedQuestions={selectedQuestions}
+            toggleQuestionSelection={toggleQuestionSelection}
           />
         );
       })}

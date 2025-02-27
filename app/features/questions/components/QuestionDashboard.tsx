@@ -5,21 +5,25 @@ import {
   DialogContent,
   DialogTrigger,
 } from '@/shared/components/ui/dialog';
-import { JsonImporter } from '../../importer/components/JsonImporter';
-import { FilterBar } from './FilterBar';
-import { ActionBar } from './ActionBar';
-import { QuestionList } from './QuestionList';
+import { JsonImporter } from '@/features/importer/components/JsonImporter';
+import { FilterBar } from '@/features/questions/components/FilterBar';
+import { ActionBar } from '@/features/questions/components/ActionBar';
+import { QuestionList } from '@/features/questions/components/QuestionList';
 import {
   useQuestions,
   useIgnoredDimensions,
   useExpandedCards,
   useFilter,
   useErrorDimensions,
-} from '../hooks';
-import type { QuestionResult } from '../types';
+} from '@/features/questions/hooks';
+import type { QuestionResult } from '@/features/questions/types';
+import { gradeQuestion } from '@/features/questions/services/questionApi';
 
 export function QuestionDashboard() {
   const [isImporterOpen, setIsImporterOpen] = useState(false);
+  const [selectedQuestions, setSelectedQuestions] = useState<
+    Record<number, boolean>
+  >({});
 
   // Use custom hooks
   const {
@@ -44,6 +48,119 @@ export function QuestionDashboard() {
     useFilter();
   const { allErrorDimensions } = useErrorDimensions(results);
 
+  // Function to toggle selection of a question
+  const toggleQuestionSelection = (index: number) => {
+    setSelectedQuestions((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  // Function to select all visible questions
+  const selectAllQuestions = () => {
+    const newSelected: Record<number, boolean> = {};
+    filteredResults.forEach((result) => {
+      const originalIndex = results.findIndex((r) => r === result);
+      newSelected[originalIndex] = true;
+    });
+    setSelectedQuestions(newSelected);
+  };
+
+  // Function to deselect all questions
+  const deselectAllQuestions = () => {
+    setSelectedQuestions({});
+  };
+
+  // Function to handle batch refresh of selected questions
+  const handleBatchRefresh = async () => {
+    const selectedIndices = Object.keys(selectedQuestions)
+      .filter((key) => selectedQuestions[parseInt(key)])
+      .map((key) => parseInt(key));
+
+    if (selectedIndices.length === 0) return;
+
+    // Mark all selected questions as refreshing
+    selectedIndices.forEach((index) => {
+      addRefreshingIndex(index);
+    });
+
+    try {
+      // Create a copy of the current results
+      const updatedResults = [...results];
+
+      // Update the loading state for selected questions
+      selectedIndices.forEach((index) => {
+        updatedResults[index] = {
+          question: results[index].question,
+          isLoading: true,
+        };
+      });
+
+      // Update the state to show loading
+      updateResults(updatedResults);
+
+      // Process each question sequentially to avoid overwhelming the API
+      for (const index of selectedIndices) {
+        try {
+          const questionToRefresh = results[index].question;
+          const response = await gradeQuestion(questionToRefresh);
+
+          // Update this specific question with the response
+          updatedResults[index] = {
+            question: questionToRefresh,
+            response,
+            isLoading: false,
+          };
+
+          // Update the results after each question is processed
+          updateResults([...updatedResults]);
+        } catch (error) {
+          // Handle error for this specific question
+          updatedResults[index] = {
+            question: results[index].question,
+            isLoading: false,
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to refresh question',
+          };
+
+          // Update the results after each error
+          updateResults([...updatedResults]);
+        } finally {
+          // Remove this question from the refreshing indices
+          removeRefreshingIndex(index);
+        }
+      }
+    } catch (error) {
+      console.error('Error in batch refresh:', error);
+    }
+  };
+
+  // Function to handle batch removal of selected questions
+  const handleBatchRemove = () => {
+    const selectedIndices = Object.keys(selectedQuestions)
+      .filter((key) => selectedQuestions[parseInt(key)])
+      .map((key) => parseInt(key))
+      .sort((a, b) => b - a); // Sort in descending order to remove from end first
+
+    if (selectedIndices.length === 0) return;
+
+    // Create a copy of the current results
+    const updatedResults = [...results];
+
+    // Remove the questions at the specified indices
+    selectedIndices.forEach((index) => {
+      updatedResults.splice(index, 1);
+    });
+
+    // Update the state with the new results
+    updateResults(updatedResults);
+
+    // Clear selection after removal
+    deselectAllQuestions();
+  };
+
   // Function to handle receiving results from the JsonImporter
   const handleImportResults = (importedResults: QuestionResult[]) => {
     // Combine existing results with newly imported results instead of replacing them
@@ -57,6 +174,7 @@ export function QuestionDashboard() {
   const handleClearResults = () => {
     clearResultsFromStorage();
     resetExpandedCards();
+    deselectAllQuestions(); // Clear selections when clearing results
   };
 
   // Get filter counts
@@ -67,6 +185,9 @@ export function QuestionDashboard() {
 
   // Filter results based on the active filter
   const filteredResults = filterResults(results, ignoredDimensions);
+
+  // Count selected questions
+  const selectedCount = Object.values(selectedQuestions).filter(Boolean).length;
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -181,18 +302,105 @@ export function QuestionDashboard() {
                       toggleFilter={toggleFilter}
                     />
                   </div>
-                  <ActionBar
-                    isProcessing={isProcessing}
-                    filteredResults={filteredResults}
-                    activeFilter={activeFilter}
-                    allErrorDimensions={allErrorDimensions}
-                    ignoredDimensions={ignoredDimensions}
-                    toggleDimensionIgnore={toggleDimensionIgnore}
-                    handleCancelProcessing={handleCancelProcessing}
-                    handleRetryQuestions={handleRetryQuestions}
-                    results={results}
-                    errorCount={errorCount}
-                  />
+                  <div className="flex items-center gap-2">
+                    {/* Batch action buttons - only show when questions are selected */}
+                    {selectedCount > 0 && (
+                      <div className="flex items-center gap-2 mr-2 bg-blue-50 px-3 py-1 rounded-md">
+                        <span className="text-sm text-blue-700">
+                          {selectedCount} selected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleBatchRefresh}
+                          className="h-7 text-xs text-blue-700 hover:text-blue-800 hover:bg-blue-100"
+                          disabled={isProcessing}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-1"
+                          >
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                            <path d="M3 3v5h5"></path>
+                          </svg>
+                          Refresh
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleBatchRemove}
+                          className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-1"
+                          >
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                          </svg>
+                          Remove
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={deselectAllQuestions}
+                          className="h-7 text-xs"
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    )}
+                    {/* Selection controls */}
+                    <div className="flex items-center gap-2 mr-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={selectAllQuestions}
+                        className="h-7 text-xs"
+                        disabled={filteredResults.length === 0}
+                      >
+                        Select All
+                      </Button>
+                      {selectedCount > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={deselectAllQuestions}
+                          className="h-7 text-xs"
+                        >
+                          Deselect All
+                        </Button>
+                      )}
+                    </div>
+                    <ActionBar
+                      isProcessing={isProcessing}
+                      filteredResults={filteredResults}
+                      activeFilter={activeFilter}
+                      allErrorDimensions={allErrorDimensions}
+                      ignoredDimensions={ignoredDimensions}
+                      toggleDimensionIgnore={toggleDimensionIgnore}
+                      handleCancelProcessing={handleCancelProcessing}
+                      results={results}
+                      errorCount={errorCount}
+                    />
+                  </div>
                 </div>
 
                 {/* Processing indicator */}
@@ -215,6 +423,8 @@ export function QuestionDashboard() {
                   updateResults={updateResults}
                   addRefreshingIndex={addRefreshingIndex}
                   removeRefreshingIndex={removeRefreshingIndex}
+                  selectedQuestions={selectedQuestions}
+                  toggleQuestionSelection={toggleQuestionSelection}
                 />
               </div>
             ) : (

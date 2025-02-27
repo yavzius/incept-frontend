@@ -1,68 +1,5 @@
-import axios from 'axios';
-
-// Define the types needed for the question data
-export interface Question {
-    standard: string;
-    statement: string;
-    sourceId: number;
-    question: string;
-    answers: {
-        label: string;
-        isCorrect: boolean;
-    }[];
-    difficulty: number;
-    referenceText: string;
-}
-
-export interface ScoreCardDimension {
-    name: string;
-    passed: boolean;
-    explanation: string;
-}
-
-export interface ScoreCard {
-    dimensions: ScoreCardDimension[];
-    overall_pass: boolean;
-}
-
-export interface ApiResponse {
-    status: string;
-    scorecard: ScoreCard;
-}
-
-export interface QuestionResult {
-    question: Question;
-    response?: ApiResponse;
-    isLoading: boolean;
-    error?: string;
-}
-
-export interface ComparisonResult extends QuestionResult {
-    compactResponse?: ApiResponse;
-    compactError?: string;
-    isCompactLoading: boolean;
-    standardResponseTime?: number; // Time in milliseconds for standard API
-    compactResponseTime?: number;  // Time in milliseconds for compact API
-}
-
-const API_BASE_URL = 'http://localhost:8000/api/v1';
-
-/**
- * Grades a question using the standard API endpoint
- * @param question The question to grade
- * @returns A promise that resolves to the API response
- */
-export async function gradeQuestion(question: Question): Promise<ApiResponse> {
-    try {
-        const response = await axios.post<ApiResponse>(
-            `${API_BASE_URL}/questions/grade`,
-            question
-        );
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
-}
+import type { Question, QuestionResult } from '../types';
+import { gradeQuestion } from './api';
 
 /**
  * Processes an array of questions, grading each one
@@ -118,4 +55,4 @@ export function processQuestions(
 
     // Return results immediately, they will be updated as processing completes
     return results;
-}
+} 

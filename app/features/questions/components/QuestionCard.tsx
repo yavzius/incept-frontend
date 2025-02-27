@@ -6,9 +6,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/shared/components/ui/tooltip';
+import { Checkbox } from '@/shared/components/ui/checkbox';
 import type { QuestionResult } from '../types';
 import { MathRenderer } from './MathRenderer';
-import { gradeQuestion } from '../../../lib/questionApi';
+import { gradeQuestion } from '../services/questionApi';
 
 interface QuestionCardProps {
   result: QuestionResult;
@@ -23,6 +24,8 @@ interface QuestionCardProps {
   addRefreshingIndex: (index: number) => void;
   removeRefreshingIndex: (index: number) => void;
   allResults: QuestionResult[];
+  selectedQuestions?: Record<number, boolean>;
+  toggleQuestionSelection?: (index: number) => void;
 }
 
 export function QuestionCard({
@@ -38,6 +41,8 @@ export function QuestionCard({
   addRefreshingIndex,
   removeRefreshingIndex,
   allResults,
+  selectedQuestions = {},
+  toggleQuestionSelection = () => {},
 }: QuestionCardProps) {
   // Function to handle refreshing a single question
   const handleRefreshQuestion = async (
@@ -111,6 +116,12 @@ export function QuestionCard({
     updateResults(updatedResults);
   };
 
+  // Function to handle checkbox click without expanding the card
+  const handleCheckboxClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    toggleQuestionSelection(originalIndex);
+  };
+
   // Helper function to check if a question has errors that aren't ignored
   const hasRelevantErrors = (result: QuestionResult) => {
     if (result.isLoading) return false;
@@ -136,6 +147,14 @@ export function QuestionCard({
     >
       {/* Collapsed View */}
       <div className="p-3 flex items-center justify-between">
+        {/* Checkbox for selection */}
+        <div className="mr-3" onClick={handleCheckboxClick}>
+          <Checkbox
+            checked={selectedQuestions[originalIndex] || false}
+            className="cursor-pointer"
+          />
+        </div>
+
         <div className="flex items-center space-x-3 flex-grow">
           {/* Pass/Fail Status */}
           {result.isLoading ? (
