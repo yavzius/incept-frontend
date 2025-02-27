@@ -44,47 +44,34 @@ export function QuestionCard({
   selectedQuestions = {},
   toggleQuestionSelection = () => {},
 }: QuestionCardProps) {
-  // Function to handle refreshing a single question
   const handleRefreshQuestion = async (
     index: number,
     event: React.MouseEvent
   ) => {
-    // Prevent the card from expanding when clicking the refresh button
     event.stopPropagation();
-
-    // Mark this question as refreshing
     addRefreshingIndex(index);
 
     try {
-      // Get the question to refresh
       const questionToRefresh = allResults[index].question;
-
-      // Create a copy of the current results
       const updatedResults = [...allResults];
 
-      // Update the loading state for this question
       updatedResults[index] = {
         question: questionToRefresh,
         isLoading: true,
       };
 
-      // Update the state to show loading
       updateResults(updatedResults);
 
-      // Call the API to grade the question
       const response = await gradeQuestion(questionToRefresh);
 
-      // Update the results with the new response
       updatedResults[index] = {
         question: questionToRefresh,
         response,
         isLoading: false,
       };
 
-      // Update the state with the new results
       updateResults(updatedResults);
     } catch (error) {
-      // Handle error
       const updatedResults = [...allResults];
       updatedResults[index] = {
         question: allResults[index].question,
@@ -93,48 +80,23 @@ export function QuestionCard({
           error instanceof Error ? error.message : 'Failed to refresh question',
       };
 
-      // Update the state with the error
       updateResults(updatedResults);
     } finally {
-      // Remove this question from the refreshing indices
       removeRefreshingIndex(index);
     }
   };
 
-  // Function to handle removing a single question
   const handleRemoveQuestion = (index: number, event: React.MouseEvent) => {
-    // Prevent the card from expanding when clicking the remove button
     event.stopPropagation();
 
-    // Create a copy of the current results
     const updatedResults = [...allResults];
-
-    // Remove the question at the specified index
     updatedResults.splice(index, 1);
-
-    // Update the state with the new results
     updateResults(updatedResults);
   };
 
-  // Function to handle checkbox click without expanding the card
   const handleCheckboxClick = (event: React.MouseEvent) => {
     event.stopPropagation();
     toggleQuestionSelection(originalIndex);
-  };
-
-  // Helper function to check if a question has errors that aren't ignored
-  const hasRelevantErrors = (result: QuestionResult) => {
-    if (result.isLoading) return false;
-    if (result.error) return true;
-
-    if (result.response && !result.response.scorecard.overall_pass) {
-      // Check if there are any failing dimensions that aren't ignored
-      return result.response.scorecard.dimensions.some(
-        (dim) => !dim.passed && !ignoredDimensions.includes(dim.name)
-      );
-    }
-
-    return false;
   };
 
   return (
@@ -145,10 +107,11 @@ export function QuestionCard({
       }`}
       onClick={() => toggleCardExpansion(originalIndex)}
     >
-      {/* Collapsed View */}
       <div className="p-3 flex items-center justify-between">
-        {/* Checkbox for selection */}
-        <div className="mr-3" onClick={handleCheckboxClick}>
+        <div
+          className="mr-3 w-6 flex items-center justify-center"
+          onClick={handleCheckboxClick}
+        >
           <Checkbox
             checked={selectedQuestions[originalIndex] || false}
             className="cursor-pointer"
@@ -156,7 +119,6 @@ export function QuestionCard({
         </div>
 
         <div className="flex items-center space-x-3 flex-grow">
-          {/* Pass/Fail Status */}
           {result.isLoading ? (
             <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-100">
               <div className="animate-spin h-4 w-4 border-b-2 border-gray-500 rounded-full"></div>
@@ -167,7 +129,6 @@ export function QuestionCard({
             </div>
           ) : result.response ? (
             (() => {
-              // Check if the question failed but all failing dimensions are ignored
               const hasOnlyIgnoredErrors =
                 !result.response.scorecard.overall_pass &&
                 !result.response.scorecard.dimensions.some(
@@ -203,13 +164,11 @@ export function QuestionCard({
             })()
           ) : null}
 
-          {/* Question Preview */}
           <div className="flex-grow">
             <div className="line-clamp-2 text-sm">
               <MathRenderer content={result.question.question} />
             </div>
 
-            {/* Fail Reasons (only shown when there are failing dimensions) */}
             {result.response &&
               !result.response.scorecard.overall_pass &&
               result.response.scorecard.dimensions.some(
@@ -249,9 +208,7 @@ export function QuestionCard({
               )}
           </div>
         </div>
-        {/* Action buttons container with hover effect */}
         <div className="flex items-center space-x-2 relative">
-          {/* Refresh Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -280,7 +237,6 @@ export function QuestionCard({
             </svg>
           </Button>
 
-          {/* Remove Button */}
           <Button
             variant="ghost"
             size="icon"
@@ -305,7 +261,6 @@ export function QuestionCard({
             </svg>
           </Button>
         </div>
-        {/* Standard, Difficulty and Actions */}
         <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -327,7 +282,6 @@ export function QuestionCard({
         </div>
       </div>
 
-      {/* Expanded View */}
       {expandedCards[originalIndex] && (
         <CardContent className="pt-0 border-t">
           <div className="space-y-4 pt-3">

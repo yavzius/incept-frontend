@@ -33,9 +33,7 @@ export function QuestionDashboard() {
     isLoading,
     error,
     handleRefreshFromAPI,
-    handleClearResults: clearResultsFromStorage,
     handleCancelProcessing,
-    handleRetryQuestions,
     updateResults,
     addRefreshingIndex,
     removeRefreshingIndex,
@@ -170,13 +168,6 @@ export function QuestionDashboard() {
     resetExpandedCards(); // Reset expanded cards when new results are imported
   };
 
-  // Function to clear all results
-  const handleClearResults = () => {
-    clearResultsFromStorage();
-    resetExpandedCards();
-    deselectAllQuestions(); // Clear selections when clearing results
-  };
-
   // Get filter counts
   const { errorCount, successCount, loadingCount } = getFilterCounts(
     results,
@@ -303,92 +294,6 @@ export function QuestionDashboard() {
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* Batch action buttons - only show when questions are selected */}
-                    {selectedCount > 0 && (
-                      <div className="flex items-center gap-2 mr-2 bg-blue-50 px-3 py-1 rounded-md">
-                        <span className="text-sm text-blue-700">
-                          {selectedCount} selected
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleBatchRefresh}
-                          className="h-7 text-xs text-blue-700 hover:text-blue-800 hover:bg-blue-100"
-                          disabled={isProcessing}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mr-1"
-                          >
-                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                            <path d="M3 3v5h5"></path>
-                          </svg>
-                          Refresh
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleBatchRemove}
-                          className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mr-1"
-                          >
-                            <path d="M3 6h18"></path>
-                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          </svg>
-                          Remove
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={deselectAllQuestions}
-                          className="h-7 text-xs"
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                    )}
-                    {/* Selection controls */}
-                    <div className="flex items-center gap-2 mr-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={selectAllQuestions}
-                        className="h-7 text-xs"
-                        disabled={filteredResults.length === 0}
-                      >
-                        Select All
-                      </Button>
-                      {selectedCount > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={deselectAllQuestions}
-                          className="h-7 text-xs"
-                        >
-                          Deselect All
-                        </Button>
-                      )}
-                    </div>
                     <ActionBar
                       isProcessing={isProcessing}
                       filteredResults={filteredResults}
