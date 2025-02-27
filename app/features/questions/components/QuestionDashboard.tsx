@@ -6,7 +6,6 @@ import {
   DialogTrigger,
 } from '@/shared/components/ui/dialog';
 import { JsonImporter } from '../../importer/components/JsonImporter';
-import { clearResults } from '../../../lib/storageService';
 import { FilterBar } from './FilterBar';
 import { ActionBar } from './ActionBar';
 import { QuestionList } from './QuestionList';
@@ -56,7 +55,6 @@ export function QuestionDashboard() {
 
   // Function to clear all results
   const handleClearResults = () => {
-    clearResults();
     clearResultsFromStorage();
     resetExpandedCards();
   };

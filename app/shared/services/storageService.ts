@@ -1,37 +1,4 @@
-import type { QuestionResult } from './questionApi';
-
-// In-memory storage for question results
-let questionResults: QuestionResult[] = [];
-
-// Constants for localStorage
 const IGNORED_DIMENSIONS_KEY = 'ignored_error_dimensions';
-
-/**
- * Saves question results to in-memory storage
- * @param results The results to save
- */
-export function saveResults(results: QuestionResult[]): void {
-    try {
-        questionResults = [...results];
-    } catch (error) {
-        console.error('Failed to save results:', error);
-    }
-}
-
-/**
- * Retrieves question results from in-memory storage
- * @returns The saved results or an empty array if none exist
- */
-export function getResults(): QuestionResult[] {
-    return [...questionResults];
-}
-
-/**
- * Clears all saved results from in-memory storage
- */
-export function clearResults(): void {
-    questionResults = [];
-}
 
 /**
  * Saves ignored error dimensions to localStorage

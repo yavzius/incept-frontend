@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getIgnoredDimensions, saveIgnoredDimensions } from '../../../lib/storageService';
+import { getIgnoredDimensions, saveIgnoredDimensions } from '../../../shared/services/storageService';
 
 export function useIgnoredDimensions() {
     const [ignoredDimensions, setIgnoredDimensions] = useState<string[]>([]);

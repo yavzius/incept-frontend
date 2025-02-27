@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Question, QuestionResult } from './questionApi';
+import type { Question, QuestionResult } from '../../lib/questionApi';
 
 // Define the API response structure for the list endpoint
 interface ApiListResponse {

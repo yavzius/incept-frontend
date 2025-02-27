@@ -15,12 +15,7 @@ import {
   CardContent,
   CardFooter,
 } from '@/shared/components/ui/card';
-import type {
-  Question,
-  QuestionResult,
-  ApiResponse,
-} from '../../../lib/questionApi';
-import { graderWorkerService } from '../../../lib/workerService';
+import type { Question, QuestionResult } from '@/lib/questionApi';
 
 interface JsonImporterProps {
   onImportResults?: (results: QuestionResult[]) => void;
@@ -182,27 +177,6 @@ export function JsonImporter({ onImportResults }: JsonImporterProps) {
         setIsSubmitting(false);
         throw new Error('No valid questions found after filtering.');
       }
-
-      // Use the worker service to process questions in the background
-      const handleProgress = (updatedResults: QuestionResult[]) => {
-        setResults(updatedResults);
-        if (onImportResults) {
-          onImportResults(updatedResults);
-        }
-      };
-
-      const handleComplete = () => {
-        setIsSubmitting(false);
-        setRequestId(null);
-      };
-
-      // Start processing and store the request ID
-      const id = graderWorkerService.processQuestions(
-        validQuestions,
-        handleProgress,
-        handleComplete
-      );
-      setRequestId(id);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'An unknown error occurred'
@@ -213,44 +187,9 @@ export function JsonImporter({ onImportResults }: JsonImporterProps) {
 
   const handleCancel = () => {
     if (requestId) {
-      graderWorkerService.cancelProcessing(requestId);
       setIsSubmitting(false);
       setRequestId(null);
     }
-  };
-
-  // Status indicator component
-  const StatusIndicator = ({ result }: { result: QuestionResult }) => {
-    if (result.isLoading) {
-      return (
-        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-100">
-          <div className="animate-spin h-4 w-4 border-b-2 border-gray-400 rounded-full"></div>
-        </div>
-      );
-    }
-
-    if (result.error) {
-      return (
-        <div className="w-6 h-6 rounded-full flex items-center justify-center bg-red-100 text-red-500">
-          ✗
-        </div>
-      );
-    }
-
-    if (result.response) {
-      const passed = result.response.scorecard.overall_pass;
-      return (
-        <div
-          className={`w-6 h-6 rounded-full flex items-center justify-center ${
-            passed ? 'bg-green-100 text-green-500' : 'bg-red-100 text-red-500'
-          }`}
-        >
-          {passed ? '✓' : '✗'}
-        </div>
-      );
-    }
-
-    return null;
   };
 
   return (
