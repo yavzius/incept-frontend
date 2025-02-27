@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/shared/components/ui/button';
 import {
   Dialog,
@@ -104,7 +104,7 @@ export function QuestionDashboard() {
                       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
                       <path d="M3 3v5h5"></path>
                     </svg>
-                    Refresh from API
+                    Refresh
                   </>
                 )}
               </Button>
@@ -190,7 +190,6 @@ export function QuestionDashboard() {
                     toggleDimensionIgnore={toggleDimensionIgnore}
                     handleCancelProcessing={handleCancelProcessing}
                     handleRetryQuestions={handleRetryQuestions}
-                    handleClearResults={handleClearResults}
                     results={results}
                     errorCount={errorCount}
                   />

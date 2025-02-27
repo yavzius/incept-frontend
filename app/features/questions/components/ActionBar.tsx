@@ -26,7 +26,6 @@ interface ActionBarProps {
   toggleDimensionIgnore: (dimension: string) => void;
   handleCancelProcessing: () => void;
   handleRetryQuestions: (questions: QuestionResult[]) => void;
-  handleClearResults: () => void;
   results: QuestionResult[];
   errorCount: number;
 }
@@ -40,7 +39,6 @@ export function ActionBar({
   toggleDimensionIgnore,
   handleCancelProcessing,
   handleRetryQuestions,
-  handleClearResults,
   results,
   errorCount,
 }: ActionBarProps) {
@@ -79,13 +77,6 @@ export function ActionBar({
           <path d="M3 3v5h5"></path>
         </svg>
         Retry {activeFilter !== 'all' ? activeFilter : 'All'}
-      </Button>
-      <Button
-        variant="outline"
-        onClick={handleClearResults}
-        className="text-xs h-8"
-      >
-        Clear Results
       </Button>
 
       {/* Ignored Dimensions Dropdown */}
