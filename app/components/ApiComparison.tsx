@@ -343,7 +343,7 @@ export function ApiComparison({
     comparisonWorkerService.compareQuestions(
       limitedQuestions,
       (updatedResults) => {
-        setComparisonResults([...updatedResults]);
+        setComparisonResults(updatedResults);
       },
       () => {
         setIsComparing(false);
@@ -399,7 +399,7 @@ export function ApiComparison({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {comparisonResults.map((result, index) => (
               <div
-                key={index}
+                key={`result-${index}-${result.isLoading}-${result.isCompactLoading}`}
                 className="border rounded-lg p-4 shadow-sm bg-white"
               >
                 <div className="mb-3">
@@ -409,7 +409,10 @@ export function ApiComparison({
                   </p>
                 </div>
                 <ComparisonView result={result} />
-                <DetailedResultsDialog result={result} />
+                <DetailedResultsDialog
+                  key={`dialog-${index}-${result.isLoading}-${result.isCompactLoading}`}
+                  result={result}
+                />
               </div>
             ))}
           </div>

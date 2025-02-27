@@ -55,7 +55,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
         // Send initial progress update
         self.postMessage({
             type: 'PROGRESS_UPDATE',
-            results: [...results],
+            results: JSON.parse(JSON.stringify(results)),
             requestId
         } as ProgressUpdate);
 
@@ -95,9 +95,12 @@ self.addEventListener('message', async (event: MessageEvent) => {
                 // Send progress update
                 self.postMessage({
                     type: 'PROGRESS_UPDATE',
-                    results: [...results],
+                    results: JSON.parse(JSON.stringify(results)),
                     requestId
                 } as ProgressUpdate);
+
+                // Add a small delay to ensure updates are processed
+                await new Promise(resolve => setTimeout(resolve, 50));
             } catch (err) {
                 // Check if request is still active before updating
                 if (!activeRequests.has(requestId)) break;
@@ -112,9 +115,12 @@ self.addEventListener('message', async (event: MessageEvent) => {
                 // Send progress update
                 self.postMessage({
                     type: 'PROGRESS_UPDATE',
-                    results: [...results],
+                    results: JSON.parse(JSON.stringify(results)),
                     requestId
                 } as ProgressUpdate);
+
+                // Add a small delay to ensure updates are processed
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
 
             // Then process compact API (only after standard API is complete)
@@ -146,9 +152,12 @@ self.addEventListener('message', async (event: MessageEvent) => {
                 // Send progress update
                 self.postMessage({
                     type: 'PROGRESS_UPDATE',
-                    results: [...results],
+                    results: JSON.parse(JSON.stringify(results)),
                     requestId
                 } as ProgressUpdate);
+
+                // Add a small delay to ensure updates are processed
+                await new Promise(resolve => setTimeout(resolve, 50));
             } catch (err) {
                 // Check if request is still active before updating
                 if (!activeRequests.has(requestId)) break;
@@ -163,9 +172,12 @@ self.addEventListener('message', async (event: MessageEvent) => {
                 // Send progress update
                 self.postMessage({
                     type: 'PROGRESS_UPDATE',
-                    results: [...results],
+                    results: JSON.parse(JSON.stringify(results)),
                     requestId
                 } as ProgressUpdate);
+
+                // Add a small delay to ensure updates are processed
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
 
             // Add a small delay between questions to ensure clean separation

@@ -47,15 +47,18 @@ class ComparisonWorkerService {
         const { type, requestId, results } = event.data;
 
         if (type === 'PROGRESS_UPDATE' && results) {
+            // Create a deep copy of results to ensure React detects changes
+            const resultsCopy = JSON.parse(JSON.stringify(results));
+
             // Call progress callback if exists
             const progressCallback = this.progressCallbacks.get(requestId);
             if (progressCallback) {
-                progressCallback(results);
+                progressCallback(resultsCopy);
             }
 
             // Call global progress callback if exists
             if (this.globalProgressCallback) {
-                this.globalProgressCallback(results);
+                this.globalProgressCallback(resultsCopy);
             }
         } else if (type === 'COMPLETE') {
             // Call complete callback if exists

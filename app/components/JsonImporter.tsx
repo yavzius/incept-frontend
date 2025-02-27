@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import {
   Card,
   CardHeader,
@@ -17,6 +18,80 @@ interface JsonImporterProps {
   onImportResults?: (results: QuestionResult[]) => void;
 }
 
+// Validation function to check if a question meets the requirements
+const validateQuestion = (
+  question: Question
+): { isValid: boolean; reason?: string } => {
+  // Check if question has exactly 4 answers
+  if (!question.answers || question.answers.length !== 4) {
+    return { isValid: false, reason: 'Question must have exactly 4 answers' };
+  }
+
+  // Check if question has exactly one correct answer
+  const correctAnswers = question.answers.filter((answer) => answer.isCorrect);
+  if (correctAnswers.length !== 1) {
+    return {
+      isValid: false,
+      reason: 'Question must have exactly one correct answer',
+    };
+  }
+
+  // Check if any answer label contains "x-ck12-mathEditor"
+  if (
+    question.answers.some((answer) =>
+      answer.label.includes('x-ck12-mathEditor')
+    )
+  ) {
+    return {
+      isValid: false,
+      reason: 'Answer label contains "x-ck12-mathEditor"',
+    };
+  }
+
+  // Check if any answer label contains "x-ck12-mathjax"
+  if (
+    question.answers.some((answer) => answer.label.includes('x-ck12-mathjax'))
+  ) {
+    return {
+      isValid: false,
+      reason: 'Answer label contains "x-ck12-mathjax"',
+    };
+  }
+
+  if (question.answers.some((answer) => answer.label.includes('{'))) {
+    return {
+      isValid: false,
+      reason: 'Answer label contains "{"',
+    };
+  }
+
+  if (question.answers.some((answer) => answer.label.includes('}'))) {
+    return {
+      isValid: false,
+      reason: 'Answer label contains "}"',
+    };
+  }
+  // Check if question contains "@@@"
+  if (question.question.includes('@@@')) {
+    return { isValid: false, reason: 'Question contains "@@@"' };
+  }
+
+  if (question.question.includes('{')) {
+    return { isValid: false, reason: 'Question contains "{" ' };
+  }
+
+  if (question.question.includes('}')) {
+    return { isValid: false, reason: 'Question contains "}" ' };
+  }
+
+  // Check if question contains "}@$"
+  if (question.question.includes('}@$')) {
+    return { isValid: false, reason: 'Question contains "}@$"' };
+  }
+
+  return { isValid: true };
+};
+
 export function JsonImporter({ onImportResults }: JsonImporterProps) {
   const [jsonInput, setJsonInput] = useState<string>('');
   const [results, setResults] = useState<QuestionResult[]>([]);
@@ -24,6 +99,11 @@ export function JsonImporter({ onImportResults }: JsonImporterProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [filteredQuestions, setFilteredQuestions] = useState<{
+    total: number;
+    filtered: number;
+    reasons: string[];
+  }>({ total: 0, filtered: 0, reasons: [] });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,15 +137,42 @@ export function JsonImporter({ onImportResults }: JsonImporterProps) {
       setIsSubmitting(true);
       setError(null);
       setResults([]);
+      setFilteredQuestions({ total: 0, filtered: 0, reasons: [] });
 
-      let questions: Question[];
+      let allQuestions: Question[];
       try {
-        questions = JSON.parse(jsonInput);
-        if (!Array.isArray(questions)) {
-          questions = [questions];
+        allQuestions = JSON.parse(jsonInput);
+        if (!Array.isArray(allQuestions)) {
+          allQuestions = [allQuestions];
         }
       } catch (err) {
         throw new Error('Invalid JSON format. Please check your input.');
+      }
+
+      // Filter questions based on validation criteria
+      const validationResults = allQuestions.map((q) => ({
+        question: q,
+        validation: validateQuestion(q),
+      }));
+
+      const validQuestions = validationResults
+        .filter((item) => item.validation.isValid)
+        .map((item) => item.question);
+
+      const invalidReasons = validationResults
+        .filter((item) => !item.validation.isValid && item.validation.reason)
+        .map((item) => item.validation.reason as string);
+
+      // Update filtered questions stats
+      setFilteredQuestions({
+        total: allQuestions.length,
+        filtered: allQuestions.length - validQuestions.length,
+        reasons: [...new Set(invalidReasons)], // Remove duplicates
+      });
+
+      if (validQuestions.length === 0) {
+        setIsSubmitting(false);
+        throw new Error('No valid questions found after filtering.');
       }
 
       // Use the worker service to process questions in the background
@@ -83,7 +190,7 @@ export function JsonImporter({ onImportResults }: JsonImporterProps) {
 
       // Start processing and store the request ID
       const id = graderWorkerService.processQuestions(
-        questions,
+        validQuestions,
         handleProgress,
         handleComplete
       );
@@ -211,6 +318,28 @@ export function JsonImporter({ onImportResults }: JsonImporterProps) {
           </div>
 
           {error && <div className="text-red-500 text-sm">{error}</div>}
+
+          {filteredQuestions.filtered > 0 && (
+            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+              <AlertTitle>Questions Filtered</AlertTitle>
+              <AlertDescription>
+                <p>
+                  {filteredQuestions.filtered} out of {filteredQuestions.total}{' '}
+                  questions were filtered out.
+                </p>
+                {filteredQuestions.reasons.length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-semibold">Reasons:</p>
+                    <ul className="list-disc pl-5 text-sm">
+                      {filteredQuestions.reasons.map((reason, index) => (
+                        <li key={index}>{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {(jsonInput || selectedFileName) && (
             <div className="text-sm text-gray-500">

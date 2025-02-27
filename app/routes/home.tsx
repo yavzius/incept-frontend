@@ -116,7 +116,13 @@ export default function Home() {
 
   // Function to handle receiving results from the JsonImporter
   const handleImportResults = (importedResults: QuestionResult[]) => {
-    setResults(importedResults);
+    // Combine existing results with newly imported results instead of replacing them
+    const combinedResults = [...results, ...importedResults];
+    setResults(combinedResults);
+
+    // Save the combined results to local storage
+    saveResults(combinedResults);
+
     setIsImporterOpen(false); // Close the dialog after import
     setExpandedCards({}); // Reset expanded cards when new results are imported
     setIsProcessing(graderWorkerService.isProcessing());
