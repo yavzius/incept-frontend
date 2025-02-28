@@ -7,6 +7,7 @@ export interface GenerateRequest {
     standard: string;
     query: string;
     count: number;
+    difficulty: number;
 }
 
 /**
@@ -25,6 +26,7 @@ export interface GenerateFormState {
     standard: string;
     query: string;
     count: number;
+    difficulty: number;
     isLoading: boolean;
     error?: string;
 }

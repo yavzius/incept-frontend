@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/shared/components/ui/radio-group';
 import { generateQuestions } from '../services';
 import { useStandards } from '../../questions/hooks/useStandards';
 import type {
@@ -34,6 +35,7 @@ export function GenerateForm({
     standard: '',
     query: 'The student is very bored and they like challenging questions',
     count: 5,
+    difficulty: 2,
     isLoading: false,
   });
 
@@ -69,6 +71,10 @@ export function GenerateForm({
     }
   };
 
+  const handleDifficultyChange = (value: string) => {
+    setFormState((prev) => ({ ...prev, difficulty: parseInt(value) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -91,6 +97,7 @@ export function GenerateForm({
         standard: formState.standard,
         query: formState.query,
         count: formState.count,
+        difficulty: formState.difficulty,
       };
 
       const response = await generateQuestions(request);
@@ -100,6 +107,7 @@ export function GenerateForm({
         standard: '',
         query: '',
         count: 5,
+        difficulty: 2,
         isLoading: false,
       });
 
@@ -194,6 +202,35 @@ export function GenerateForm({
             className="w-full p-2 border rounded-md"
             disabled={formState.isLoading}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Difficulty Level</Label>
+          <RadioGroup
+            value={formState.difficulty.toString()}
+            onValueChange={handleDifficultyChange}
+            className="flex space-x-4"
+            disabled={formState.isLoading}
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="1" id="difficulty-1" />
+              <Label htmlFor="difficulty-1" className="cursor-pointer">
+                Easy
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="2" id="difficulty-2" />
+              <Label htmlFor="difficulty-2" className="cursor-pointer">
+                Medium
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="3" id="difficulty-3" />
+              <Label htmlFor="difficulty-3" className="cursor-pointer">
+                Hard
+              </Label>
+            </div>
+          </RadioGroup>
         </div>
 
         <div className="flex justify-end mt-4">
